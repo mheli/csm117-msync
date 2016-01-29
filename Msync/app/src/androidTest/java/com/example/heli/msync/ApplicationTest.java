@@ -1,4 +1,4 @@
-package com.example.elvin.msync;
+package com.example.heli.msync;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

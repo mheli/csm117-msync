@@ -1,4 +1,4 @@
-package com.example.elvin.msync;
+package com.example.heli.msync;
 
 import org.junit.Test;
 
