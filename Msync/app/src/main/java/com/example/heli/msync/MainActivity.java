@@ -15,6 +15,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void filePicker(View view){
-        Toast.makeText(MainActivity.this, "test", Toast.LENGTH_SHORT).show();
+        Toast.makeText(MainActivity.this, "file picker pressed", Toast.LENGTH_SHORT).show();
+    }
+
+    public void connect(View view){
+        Toast.makeText(MainActivity.this, "connect pressed", Toast.LENGTH_SHORT).show();
+
+    }
+
+    public void listen(View view){
+        Toast.makeText(MainActivity.this, "listen pressed", Toast.LENGTH_SHORT).show();
+
+    }
+
+    public void synchronize(View view){
+        Toast.makeText(MainActivity.this, "synchronize pressed", Toast.LENGTH_SHORT).show();
+
     }
 }

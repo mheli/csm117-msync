@@ -15,7 +15,6 @@
         android:id="@+id/buttonFilePicker"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="35dp"
-        android:nestedScrollingEnabled="false"
         android:onClick="filePicker"
         android:text="@string/file_picker" />
 
@@ -24,7 +23,9 @@
         android:layout_height="wrap_content"
         android:text="@string/connect"
         android:id="@+id/buttonConnect"
-        android:layout_centerVertical="true"
+        android:onClick="connect"
+        android:layout_marginTop="71dp"
+        android:layout_below="@+id/buttonFilePicker"
         android:layout_centerHorizontal="true" />
 
     <Button
@@ -34,5 +35,16 @@
         android:id="@+id/buttonSynchronize"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="55dp" />
+        android:layout_marginBottom="55dp"
+        android:onClick="synchronize"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/listen"
+        android:id="@+id/buttonListen"
+        android:layout_below="@+id/buttonConnect"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="52dp"
+        android:onClick="listen"/>
 </RelativeLayout>
