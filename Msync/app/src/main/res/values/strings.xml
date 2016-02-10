@@ -1,7 +1,0 @@
-<resources>
-    <string name="app_name">Msync</string>
-    <string name="file_picker">File Picker</string>
-    <string name="connect">Connect</string>
-    <string name="synchronize">Synchronize</string>
-    <string name="listen">Listen</string>
-</resources>
