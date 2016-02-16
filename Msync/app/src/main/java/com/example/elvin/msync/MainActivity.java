@@ -127,7 +127,7 @@ public class MainActivity extends Activity implements MediaController.MediaPlaye
         //menu item selected
         switch (item.getItemId()){
             case R.id.action_shuffle:
-                //shuffle
+                musicSrv.setShuffle();
                 break;
             case R.id.action_end:
                 stopService(playIntent);
@@ -165,33 +165,51 @@ public class MainActivity extends Activity implements MediaController.MediaPlaye
         controller.setEnabled(true);
     }
 
+    //play next
+    private void playNext(){
+        musicSrv.playNext();
+        controller.show(0);
+    }
+
+    //play previous
+    private void playPrev(){
+        musicSrv.playPrev();
+        controller.show(0);
+    }
+
     @Override
     public void start() {
-
+        musicSrv.go();
     }
 
     @Override
     public void pause() {
-
+        musicSrv.pausePlayer();
     }
 
     @Override
     public int getDuration() {
-        return 0;
+        if(musicSrv!=null && musicBound && musicSrv.isPng())
+            return musicSrv.getDur();
+        else return 0;
     }
 
     @Override
     public int getCurrentPosition() {
-        return 0;
+        if(musicSrv!=null && musicBound && musicSrv.isPng())
+            return musicSrv.getPosn();
+        else return 0;
     }
 
     @Override
     public void seekTo(int pos) {
-
+        musicSrv.seek(pos);
     }
 
     @Override
     public boolean isPlaying() {
+        if(musicSrv!=null && musicBound)
+            return musicSrv.isPng();
         return false;
     }
 
@@ -202,17 +220,17 @@ public class MainActivity extends Activity implements MediaController.MediaPlaye
 
     @Override
     public boolean canPause() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean canSeekBackward() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean canSeekForward() {
-        return false;
+        return true;
     }
 
     @Override
