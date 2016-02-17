@@ -1,23 +1,20 @@
 package com.example.elvin.msync;
 
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.ContentResolver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ListView;
 import android.widget.MediaController;
-import android.os.IBinder;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.view.MenuItem;
-import android.view.View;
-import com.example.elvin.msync.MusicService.MusicBinder;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,6 +28,7 @@ public class MainActivity extends Activity implements MediaController.MediaPlaye
     private MusicService musicSrv;
     private Intent playIntent;
     private boolean musicBound = false;
+    private boolean paused=false, playbackPaused=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,6 +97,11 @@ public class MainActivity extends Activity implements MediaController.MediaPlaye
     public void songPicked(View view){
         musicSrv.setSong(Integer.parseInt(view.getTag().toString()));
         musicSrv.playSong();
+        if (playbackPaused) {
+            setController();
+            playbackPaused=false;
+        }
+        controller.show(0);
     }
 
     @Override
@@ -153,7 +156,7 @@ public class MainActivity extends Activity implements MediaController.MediaPlaye
             public void onClick(View v) {
                 playNext();
             }
-        }, new View.OnClockListener(){
+        }, new View.OnClickListener(){
             @Override
             public void onClick(View v){
                 playPrev();
@@ -168,12 +171,20 @@ public class MainActivity extends Activity implements MediaController.MediaPlaye
     //play next
     private void playNext(){
         musicSrv.playNext();
+        if(playbackPaused){
+            setController();
+            playbackPaused=false;
+        }
         controller.show(0);
     }
 
     //play previous
     private void playPrev(){
         musicSrv.playPrev();
+        if(playbackPaused){
+            setController();
+            playbackPaused=false;
+        }
         controller.show(0);
     }
 
@@ -184,6 +195,7 @@ public class MainActivity extends Activity implements MediaController.MediaPlaye
 
     @Override
     public void pause() {
+        playbackPaused=true;
         musicSrv.pausePlayer();
     }
 
@@ -237,4 +249,26 @@ public class MainActivity extends Activity implements MediaController.MediaPlaye
     public int getAudioSessionId() {
         return 0;
     }
+
+    @Override
+    protected void onPause(){
+        super.onPause();
+        paused=true;
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+        if(paused){
+            setController();
+            paused=false;
+        }
+    }
+
+    @Override
+    protected void onStop(){
+        controller.hide();
+        super.onStop();
+    }
+
 }
