@@ -1,5 +1,6 @@
 package com.example.heli.myapplication;
 
+import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -23,6 +24,8 @@ public class MusicControllerActivity extends Activity implements MediaController
     public static final String TAG = "musiccontroller";
     private String host = null;
     private int port;
+    private MediaPlayer mediaPlayer = null;
+    private Uri mSong = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,42 +35,61 @@ public class MusicControllerActivity extends Activity implements MediaController
 
         Intent intent = getIntent();
         String stringUri = intent.getStringExtra(WiFiDirectActivity.EXTRA_SONG_URI);
+        mSong = Uri.parse(stringUri);
+
         host = intent.getStringExtra(MusicControllerService.EXTRAS_GROUP_OWNER_ADDRESS);
         port = intent.getExtras().getInt(MusicControllerService.EXTRAS_GROUP_OWNER_PORT);
         Log.d(WiFiDirectActivity.TAG, "music controller activity received host:" + host);
         Log.d(WiFiDirectActivity.TAG, "music controller activity received port:" + port);
 
-        final Button button = (Button) findViewById(R.id.buttonPlay);
-        button.setOnClickListener(new View.OnClickListener() {
+        mediaPlayer = new MediaPlayer();
+
+        final Button buttonPlay = (Button) findViewById(R.id.buttonPlay);
+        buttonPlay.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MusicControllerService.startActionSendPlay(getApplicationContext(), host, port);
+                start();
             }
         });
 
-        Uri songUri = Uri.parse(stringUri);
-        MediaPlayer mediaPlayer = new MediaPlayer();
-        mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        try {
-            mediaPlayer.setDataSource(getApplicationContext(), songUri);
-            mediaPlayer.prepare();
-            mediaPlayer.start();
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-        }
-
+        final Button buttonStop = (Button) findViewById(R.id.buttonStop);
+        buttonStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pause();
+            }
+        });
     }
 
+    @Override
+    public void onStop(){
+        super.onStop();
+        kill();
+    }
 
+    public void kill(){
+        MusicControllerService.startActionSendCommand(getApplicationContext(), host, port, "KILL");
+        mediaPlayer.release();
+    }
 
     @Override
     public void start() {
-
+        MusicControllerService.startActionSendCommand(getApplicationContext(), host, port, "PLAY");
+        mediaPlayer.reset();
+        try{
+            mediaPlayer.setDataSource(getApplicationContext(), mSong);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+        } catch (Exception e){
+            Log.e(MusicPlayerActivity.TAG, e.getMessage());
+        }
+        mediaPlayer.start();
     }
 
     @Override
     public void pause() {
-
+        MusicControllerService.startActionSendCommand(getApplicationContext(), host, port, "STOP");
+        mediaPlayer.pause();
     }
 
     @Override

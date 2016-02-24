@@ -32,9 +32,11 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
     public static final String TAG = "musicplayer";
     private static View mContentView = null;
     private static Uri mSong = null;
-    private static MediaPlayer mediaPlayer = new MediaPlayer();
+    private static MediaPlayer mediaPlayer = null;
     private static Context mContext = null;
     private static Application mApplication = null;
+    private static AsyncTask<Void, Void, String> mMusicPlayerAsyncTask;
+    private static Activity mActivity = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +47,8 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
         mContentView = this.findViewById(android.R.id.content);
         mContext = getApplicationContext();
         mApplication = getApplication();
+        mediaPlayer = new MediaPlayer();
+        mActivity = this;
 
         Intent intent = getIntent();
         String stringUri = intent.getStringExtra(WiFiDirectActivity.EXTRA_SONG_URI);
@@ -52,15 +56,18 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
         Log.d(MusicPlayerActivity.TAG, "music player activity received uri:" + mSong);
 
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        receiveCommand();
+        //DeviceDetailFragment.stopFileServerAsyncTask();
+        startMusicPlayerAsyncTask();
     }
 
-    public static void receiveCommand(){
-        new MusicPlayerAsyncTask(mApplication, mContentView.findViewById(R.id.status_text))
+    public static void startMusicPlayerAsyncTask(){
+        mMusicPlayerAsyncTask = new MusicPlayerAsyncTask(mApplication, mContentView.findViewById(R.id.status_text))
                 .execute();
+        Log.d(MusicPlayerActivity.TAG, "started MusicPlayer");
     }
 
     public static void playSong(){
+        mediaPlayer.reset();
         try{
             mediaPlayer.setDataSource(mContext, mSong);
             mediaPlayer.prepare();
@@ -68,6 +75,15 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
         } catch (Exception e){
             Log.e(MusicPlayerActivity.TAG, e.getMessage());
         }
+    }
+
+    public static void pauseSong(){
+        mediaPlayer.pause();
+    }
+
+    public static void kill(){
+        mediaPlayer.release();
+        mActivity.finish();
     }
 
     /**
@@ -90,6 +106,8 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
 
         @Override
         protected String doInBackground(Void... params) {
+            if(isCancelled())
+                return null;
             try {
                 ServerSocket serverSocket = new ServerSocket(8989);
                 Log.d(MusicPlayerActivity.TAG, "Server: Socket opened");
@@ -115,6 +133,11 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
             }
         }
 
+        @Override
+        protected void onCancelled(){
+
+        }
+
         /*
          * (non-Javadoc)
          * @see android.os.AsyncTask#onPostExecute(java.lang.Object)
@@ -126,9 +149,19 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
                 switch(result){
                     case "PLAY":
                             MusicPlayerActivity.playSong();
+                            startMusicPlayerAsyncTask();
+                        break;
+                    case "STOP":
+                            MusicPlayerActivity.pauseSong();
+                            startMusicPlayerAsyncTask();
+                        break;
+                    case "KILL":
+                            this.cancel(true);
+                            Log.d(MusicPlayerActivity.TAG, "Stopped MusicPlayer");
+                            MusicPlayerActivity.kill();
                         break;
                 }
-                MusicPlayerActivity.receiveCommand();
+
                 /*
                 Intent intent = new Intent(context, MusicPlayerActivity.class);
                 intent.putExtra(WiFiDirectActivity.EXTRA_SONG_URI, "file://"+result);

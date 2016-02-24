@@ -4,6 +4,7 @@ import android.app.IntentService;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.Context;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.util.Log;
 
@@ -26,13 +27,13 @@ public class MusicControllerService extends IntentService {
     private static final int SOCKET_TIMEOUT = 5000;
     public static final String EXTRAS_GROUP_OWNER_ADDRESS = "go_host";
     public static final String EXTRAS_GROUP_OWNER_PORT = "go_port";
+    public static final String EXTRAS_COMMAND = "command";
 
     // TODO: Rename actions, choose action names that describe tasks that this
     // IntentService can perform, e.g. ACTION_FETCH_NEW_ITEMS
-    private static final String ACTION_SEND_PLAY = "com.example.heli.myapplication.action.SEND_PLAY";
+    private static final String ACTION_SEND_COMMAND = "com.example.heli.myapplication.action.SEND_COMMAND";
 
     // TODO: Rename parameters
-    private static final String EXTRA_COMMAND = "com.example.heli.myapplication.extra.COMMAND";
 
     public MusicControllerService() {
         super("MusicControllerService");
@@ -45,11 +46,12 @@ public class MusicControllerService extends IntentService {
      * @see IntentService
      */
     // TODO: Customize helper method
-    public static void startActionSendPlay(Context context, String host, int port) {
+    public static void startActionSendCommand(Context context, String host, int port, String command) {
         Intent intent = new Intent(context, MusicControllerService.class);
-        intent.setAction(ACTION_SEND_PLAY);
+        intent.setAction(ACTION_SEND_COMMAND);
         intent.putExtra(EXTRAS_GROUP_OWNER_ADDRESS, host);
         intent.putExtra(EXTRAS_GROUP_OWNER_PORT, port);
+        intent.putExtra(EXTRAS_COMMAND, command);
         context.startService(intent);
     }
 
@@ -57,10 +59,11 @@ public class MusicControllerService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         if (intent != null) {
             final String action = intent.getAction();
-            if (ACTION_SEND_PLAY.equals(action)) {
+            if (ACTION_SEND_COMMAND.equals(action)) {
                 String host = intent.getExtras().getString(EXTRAS_GROUP_OWNER_ADDRESS);
                 Socket socket = new Socket();
                 int port = intent.getExtras().getInt(EXTRAS_GROUP_OWNER_PORT);
+                String command = intent.getExtras().getString(EXTRAS_COMMAND);
 
                 try {
                     Log.d(MusicControllerActivity.TAG, "Opening client socket - ");
@@ -70,7 +73,7 @@ public class MusicControllerService extends IntentService {
                     Log.d(MusicControllerActivity.TAG, "Client socket - " + socket.isConnected());
                     OutputStream stream = socket.getOutputStream();
                     PrintStream printStream = new PrintStream(stream);
-                    printStream.print("PLAY");
+                    printStream.print(command);
                     printStream.close();
                     Log.d(MusicControllerActivity.TAG, "Client: Data written");
                 } catch (IOException e) {
@@ -91,15 +94,4 @@ public class MusicControllerService extends IntentService {
         }
     }
 
-    /**
-     * Handle action Foo in the provided background thread with the provided
-     * parameters.
-     */
-    private void handleActionSendPlay(String param1) {
-        // TODO: Handle action Foo
-
-
-
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
 }

@@ -16,6 +16,7 @@
 
 package com.example.heli.myapplication;
 
+import android.app.Activity;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -57,16 +58,21 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     private WifiP2pDevice device;
     private WifiP2pInfo info;
     ProgressDialog progressDialog = null;
+    private static AsyncTask<Void, Void, String> mFileServerAsyncTask;
+    private static Activity mActivity;
+    private static View mContentViewStatic = null;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+        mActivity = getActivity();
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         mContentView = inflater.inflate(R.layout.device_detail, null);
+        mContentViewStatic = mContentView;
         mContentView.findViewById(R.id.btn_connect).setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -143,6 +149,12 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         getActivity().startActivity(intent);
     }
 
+    public static void startFileServerAsyncTask(){
+        mFileServerAsyncTask = new FileServerAsyncTask(mActivity, mContentViewStatic.findViewById(R.id.status_text))
+                .execute();
+        Log.d(WiFiDirectActivity.TAG, "started FireServer");
+    }
+
     @Override
     public void onConnectionInfoAvailable(final WifiP2pInfo info) {
         if (progressDialog != null && progressDialog.isShowing()) {
@@ -165,8 +177,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         // server. The file server is single threaded, single connection server
         // socket.
         if (info.groupFormed && info.isGroupOwner) {
-            new FileServerAsyncTask(getActivity(), mContentView.findViewById(R.id.status_text))
-                    .execute();
+            startFileServerAsyncTask();
         } else if (info.groupFormed) {
             // The other device acts as the client. In this case, we enable the
             // get file button.
@@ -231,6 +242,8 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
         @Override
         protected String doInBackground(Void... params) {
+            if (isCancelled())
+                return null;
             try {
                 ServerSocket serverSocket = new ServerSocket(8988);
                 Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
@@ -249,11 +262,17 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 InputStream inputstream = client.getInputStream();
                 copyFile(inputstream, new FileOutputStream(f));
                 serverSocket.close();
+
                 return f.getAbsolutePath();
             } catch (IOException e) {
                 Log.e(WiFiDirectActivity.TAG, e.getMessage());
                 return null;
             }
+        }
+
+        @Override
+        protected void onCancelled(){
+
         }
 
         /*
@@ -263,18 +282,13 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         @Override
         protected void onPostExecute(String result) {
             if (result != null) {
+                this.cancel(true);
+                Log.d(WiFiDirectActivity.TAG, "stopped FireServer");
                 statusText.setText("File copied - " + result);
                 Intent intent = new Intent(context, MusicPlayerActivity.class);
-                intent.putExtra(WiFiDirectActivity.EXTRA_SONG_URI, "file://"+result);
+                intent.putExtra(WiFiDirectActivity.EXTRA_SONG_URI, "file://" + result);
                 context.startActivity(intent);
-                /*
-                Intent intent = new Intent();
-                intent.setAction(android.content.Intent.ACTION_VIEW);
-                intent.setDataAndType(Uri.parse("file://" + result), "audio/*");
-                context.startActivity(intent);
-                */
             }
-
         }
 
         /*
