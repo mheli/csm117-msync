@@ -59,6 +59,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
     private Channel channel;
     private BroadcastReceiver receiver = null;
 
+    public final static String EXTRA_SONG_URI = "com.example.heli.myapplication.SONG_URI";
     /**
      * @param isWifiP2pEnabled the isWifiP2pEnabled to set
      */

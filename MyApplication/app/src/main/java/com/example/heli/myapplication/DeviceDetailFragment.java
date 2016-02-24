@@ -133,6 +133,14 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 info.groupOwnerAddress.getHostAddress());
         serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_PORT, 8988);
         getActivity().startService(serviceIntent);
+
+        // start Media controller
+        Intent intent = new Intent(getActivity(), MusicControllerActivity.class);
+        intent.putExtra(WiFiDirectActivity.EXTRA_SONG_URI, uri.toString());
+        intent.putExtra(MusicControllerService.EXTRAS_GROUP_OWNER_ADDRESS,
+                info.groupOwnerAddress.getHostAddress());
+        intent.putExtra(MusicControllerService.EXTRAS_GROUP_OWNER_PORT, 8989);
+        getActivity().startActivity(intent);
     }
 
     @Override
@@ -256,10 +264,15 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         protected void onPostExecute(String result) {
             if (result != null) {
                 statusText.setText("File copied - " + result);
+                Intent intent = new Intent(context, MusicPlayerActivity.class);
+                intent.putExtra(WiFiDirectActivity.EXTRA_SONG_URI, "file://"+result);
+                context.startActivity(intent);
+                /*
                 Intent intent = new Intent();
                 intent.setAction(android.content.Intent.ACTION_VIEW);
                 intent.setDataAndType(Uri.parse("file://" + result), "audio/*");
                 context.startActivity(intent);
+                */
             }
 
         }
