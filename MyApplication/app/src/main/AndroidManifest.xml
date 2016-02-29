@@ -39,6 +39,10 @@
             android:name=".FileTransferService"
             android:enabled="true" />
 
+        <service
+            android:name=".SendCommandService"
+            android:exported="false" />
+
         <activity
             android:name=".MusicPlayerActivity"
             android:label="@string/title_activity_music_player"
@@ -47,18 +51,11 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.heli.myapplication.WiFiDirectActivity" />
         </activity>
-        <activity
-            android:name=".MusicControllerActivity"
-            android:label="@string/title_activity_music_controller"
-            android:parentActivityName=".WiFiDirectActivity">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.example.heli.myapplication.WiFiDirectActivity" />
-        </activity>
 
         <service
-            android:name=".MusicControllerService"
-            android:exported="false"></service>
+            android:name=".MusicService"
+            android:exported="false">
+        </service>
     </application>
 
 </manifest>

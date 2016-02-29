@@ -1,16 +1,11 @@
 package com.example.heli.myapplication;
 
 import android.app.IntentService;
-import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.Context;
-import android.media.MediaPlayer;
-import android.net.Uri;
 import android.util.Log;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
@@ -23,7 +18,9 @@ import java.net.Socket;
  * TODO: Customize class - update intent actions, extra parameters and static
  * helper methods.
  */
-public class MusicControllerService extends IntentService {
+public class SendCommandService extends IntentService {
+    public static final String TAG = "sendcommand";
+
     private static final int SOCKET_TIMEOUT = 5000;
     public static final String EXTRAS_GROUP_OWNER_ADDRESS = "go_host";
     public static final String EXTRAS_GROUP_OWNER_PORT = "go_port";
@@ -31,12 +28,12 @@ public class MusicControllerService extends IntentService {
 
     // TODO: Rename actions, choose action names that describe tasks that this
     // IntentService can perform, e.g. ACTION_FETCH_NEW_ITEMS
-    private static final String ACTION_SEND_COMMAND = "com.example.heli.myapplication.action.SEND_COMMAND";
+    private static final String ACTION_SEND_COMMAND = "com.example.heli.myapplication.action.SEND.COMMAND";
 
     // TODO: Rename parameters
 
-    public MusicControllerService() {
-        super("MusicControllerService");
+    public SendCommandService() {
+        super("SendCommandService");
     }
 
     /**
@@ -47,7 +44,7 @@ public class MusicControllerService extends IntentService {
      */
     // TODO: Customize helper method
     public static void startActionSendCommand(Context context, String host, int port, String command) {
-        Intent intent = new Intent(context, MusicControllerService.class);
+        Intent intent = new Intent(context, SendCommandService.class);
         intent.setAction(ACTION_SEND_COMMAND);
         intent.putExtra(EXTRAS_GROUP_OWNER_ADDRESS, host);
         intent.putExtra(EXTRAS_GROUP_OWNER_PORT, port);
@@ -66,18 +63,18 @@ public class MusicControllerService extends IntentService {
                 String command = intent.getExtras().getString(EXTRAS_COMMAND);
 
                 try {
-                    Log.d(MusicControllerActivity.TAG, "Opening client socket - ");
+                    Log.d(TAG, "Opening client socket - ");
                     socket.bind(null);
                     socket.connect((new InetSocketAddress(host, port)), SOCKET_TIMEOUT);
 
-                    Log.d(MusicControllerActivity.TAG, "Client socket - " + socket.isConnected());
+                    Log.d(TAG, "Client socket - " + socket.isConnected());
                     OutputStream stream = socket.getOutputStream();
                     PrintStream printStream = new PrintStream(stream);
                     printStream.print(command);
                     printStream.close();
-                    Log.d(MusicControllerActivity.TAG, "Client: Data written");
+                    Log.d(TAG, "Client: Data written");
                 } catch (IOException e) {
-                    Log.e(MusicControllerActivity.TAG, e.getMessage());
+                    Log.e(TAG, e.getMessage());
                 } finally {
                     if (socket != null) {
                         if (socket.isConnected()) {

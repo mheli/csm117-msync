@@ -1,42 +1,38 @@
 package com.example.heli.myapplication;
 
-import android.app.Application;
-import android.app.Fragment;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
+import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Activity;
-import android.os.Environment;
+import android.os.IBinder;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.MediaController;
+import android.widget.Button;
 import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InterruptedIOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class MusicPlayerActivity extends Activity implements MediaController.MediaPlayerControl{
+public class MusicPlayerActivity extends Activity{
     public static final String TAG = "musicplayer";
-    private static View mContentView = null;
-    private static Uri mSong = null;
-    private static MediaPlayer mediaPlayer = null;
-    private static Context mContext = null;
-    private static Application mApplication = null;
+    private String host = null;
+    private int port;
+    private Uri mSong = null;
+    private Intent playIntent;
+    private MusicService musicSrv;
+    private boolean musicBound = false;
+    private boolean isController = false;
+    private static MusicPlayerActivity mActivity = null;
     private static AsyncTask<Void, Void, String> mMusicPlayerAsyncTask;
-    private static Activity mActivity = null;
+
+    public static final String EXTRAS_IS_CONTROLLER = "is_controller";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,46 +40,108 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
         setContentView(R.layout.activity_music_player);
         getActionBar().setDisplayHomeAsUpEnabled(true);
 
-        mContentView = this.findViewById(android.R.id.content);
-        mContext = getApplicationContext();
-        mApplication = getApplication();
-        mediaPlayer = new MediaPlayer();
-        mActivity = this;
-
         Intent intent = getIntent();
         String stringUri = intent.getStringExtra(WiFiDirectActivity.EXTRA_SONG_URI);
         mSong = Uri.parse(stringUri);
-        Log.d(MusicPlayerActivity.TAG, "music player activity received uri:" + mSong);
 
-        mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        //DeviceDetailFragment.stopFileServerAsyncTask();
-        startMusicPlayerAsyncTask();
+        host = intent.getStringExtra(SendCommandService.EXTRAS_GROUP_OWNER_ADDRESS);
+        port = intent.getExtras().getInt(SendCommandService.EXTRAS_GROUP_OWNER_PORT);
+        isController = intent.getExtras().getBoolean(MusicPlayerActivity.EXTRAS_IS_CONTROLLER);
+
+        Log.d(TAG, "received host:" + host);
+        Log.d(TAG, "received port:" + port);
+        Log.d(TAG, "received is controller:" + isController);
+
+        mActivity = this;
     }
 
-    public static void startMusicPlayerAsyncTask(){
-        mMusicPlayerAsyncTask = new MusicPlayerAsyncTask(mApplication, mContentView.findViewById(R.id.status_text))
-                .execute();
-        Log.d(MusicPlayerActivity.TAG, "started MusicPlayer");
-    }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // Bind to LocalService
+        if(playIntent==null){
+            Log.d(TAG, "starting music service");
+            playIntent = new Intent(this, MusicService.class);
+            bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE);
+            startService(playIntent);
+            Log.d(TAG, "started music service");
+        }
 
-    public static void playSong(){
-        mediaPlayer.reset();
-        try{
-            mediaPlayer.setDataSource(mContext, mSong);
-            mediaPlayer.prepare();
-            mediaPlayer.start();
-        } catch (Exception e){
-            Log.e(MusicPlayerActivity.TAG, e.getMessage());
+        if (isController){
+            Log.d(TAG, "making buttons");
+            final Button buttonPlay = (Button) findViewById(R.id.buttonPlay);
+            buttonPlay.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    sendPlay();
+                }
+            });
+
+            final Button buttonStop = (Button) findViewById(R.id.buttonStop);
+            buttonStop.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    sendPause();
+                }
+            });
+            Log.d(TAG, "made buttons");
+
         }
     }
 
-    public static void pauseSong(){
-        mediaPlayer.pause();
+    private void startMusicPlayerAsyncTask(){
+        mMusicPlayerAsyncTask = new MusicPlayerAsyncTask(this).execute();
+        Log.d(TAG, "started MusicPlayerAsyncTask");
+}
+
+    //connect to the service
+    private ServiceConnection musicConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            MusicService.MusicBinder binder = (MusicService.MusicBinder)service;
+            //get service
+            musicSrv = binder.getService();
+            //pass list
+            musicBound = true;
+
+            if (!isController)
+                startMusicPlayerAsyncTask();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            musicBound = false;
+        }
+    };
+
+
+    public void sendPlay(){
+        if (musicBound) {
+            SendCommandService.startActionSendCommand(getApplicationContext(), host, port, "PLAY");
+            musicSrv.playSong(mSong);
+        }
     }
 
-    public static void kill(){
-        mediaPlayer.release();
-        mActivity.finish();
+    public void sendPause(){
+        if (musicBound){
+            SendCommandService.startActionSendCommand(getApplicationContext(), host, port, "STOP");
+            musicSrv.pauseSong();
+        }
+    }
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        SendCommandService.startActionSendCommand(getApplicationContext(), host, port, "KILL");
+        if (musicBound) {
+            unbindService(musicConnection);
+            stopService(playIntent);
+            musicBound = false;
+        }
+    }
+
+    public void kill() {
+        finish();
     }
 
     /**
@@ -92,16 +150,14 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
      */
     public static class MusicPlayerAsyncTask extends AsyncTask<Void, Void, String> {
 
-        private Context context;
+        private MusicPlayerActivity mParent;
         private TextView statusText;
+        private MusicService musicSrv;
 
-        /**
-         * @param context
-         * @param statusText
-         */
-        public MusicPlayerAsyncTask(Context context, View statusText) {
-            this.context = context;
-            this.statusText = (TextView) statusText;
+        public MusicPlayerAsyncTask(MusicPlayerActivity parent) {
+            this.mParent = parent;
+            this.musicSrv = this.mParent.musicSrv;
+            this.statusText = (TextView) this.mParent.findViewById(android.R.id.content).findViewById(R.id.status_text);
         }
 
         @Override
@@ -110,9 +166,9 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
                 return null;
             try {
                 ServerSocket serverSocket = new ServerSocket(8989);
-                Log.d(MusicPlayerActivity.TAG, "Server: Socket opened");
+                Log.d(TAG, "Server: Socket opened");
                 Socket client = serverSocket.accept();
-                Log.d(MusicPlayerActivity.TAG, "Server: connection done");
+                Log.d(TAG, "Server: connection done");
 
                 ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(1024);
                 byte[] buffer = new byte[1024];
@@ -128,7 +184,7 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
                 serverSocket.close();
                 return response;
             } catch (IOException e) {
-                Log.e(MusicPlayerActivity.TAG, e.getMessage());
+                Log.e(TAG, e.getMessage());
                 return null;
             }
         }
@@ -148,25 +204,20 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
                 statusText.setText("Command received- " + result);
                 switch(result){
                     case "PLAY":
-                            MusicPlayerActivity.playSong();
-                            startMusicPlayerAsyncTask();
+                        musicSrv.playSong(mParent.mSong);
+                        mParent.startMusicPlayerAsyncTask();
                         break;
                     case "STOP":
-                            MusicPlayerActivity.pauseSong();
-                            startMusicPlayerAsyncTask();
+                        musicSrv.pauseSong();
+                        mParent.startMusicPlayerAsyncTask();
                         break;
                     case "KILL":
-                            this.cancel(true);
-                            Log.d(MusicPlayerActivity.TAG, "Stopped MusicPlayer");
-                            MusicPlayerActivity.kill();
+                        this.cancel(true);
+                        Log.d(TAG, "Stopped MusicPlayerAsyncTask");
+                        mParent.kill();
                         break;
                 }
 
-                /*
-                Intent intent = new Intent(context, MusicPlayerActivity.class);
-                intent.putExtra(WiFiDirectActivity.EXTRA_SONG_URI, "file://"+result);
-                context.startActivity(intent);
-                */
             }
 
         }
@@ -181,94 +232,5 @@ public class MusicPlayerActivity extends Activity implements MediaController.Med
         }
 
     }
-
-
-    @Override
-    public void start() {
-
-    }
-
-    @Override
-    public void pause() {
-
-    }
-
-    @Override
-    public int getDuration() {
-        return 0;
-    }
-
-    @Override
-    public int getCurrentPosition() {
-        return 0;
-    }
-
-    @Override
-    public void seekTo(int pos) {
-
-    }
-
-    @Override
-    public boolean isPlaying() {
-        return false;
-    }
-
-    @Override
-    public int getBufferPercentage() {
-        return 0;
-    }
-
-    @Override
-    public boolean canPause() {
-        return false;
-    }
-
-    @Override
-    public boolean canSeekBackward() {
-        return false;
-    }
-
-    @Override
-    public boolean canSeekForward() {
-        return false;
-    }
-
-    @Override
-    public int getAudioSessionId() {
-        return 0;
-    }
-
-    /*
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle app bar item clicks here. The app bar
-        // automatically handles clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-    */
-
-
-    /**
-     * A placeholder fragment containing a simple view.
-     */
-    /*
-    public static class PlaceholderFragment extends Fragment {
-
-        public PlaceholderFragment() { }
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                                 Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_display_message,
-                    container, false);
-            return rootView;
-        }
-    }
-    */
 
 }

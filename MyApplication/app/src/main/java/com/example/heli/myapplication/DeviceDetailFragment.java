@@ -20,7 +20,6 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.net.wifi.WpsInfo;
@@ -59,20 +58,17 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
     private WifiP2pInfo info;
     ProgressDialog progressDialog = null;
     private static AsyncTask<Void, Void, String> mFileServerAsyncTask;
-    private static Activity mActivity;
-    private static View mContentViewStatic = null;
+    private static String mHost = null;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mActivity = getActivity();
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         mContentView = inflater.inflate(R.layout.device_detail, null);
-        mContentViewStatic = mContentView;
         mContentView.findViewById(R.id.btn_connect).setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -140,18 +136,18 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_PORT, 8988);
         getActivity().startService(serviceIntent);
 
-        // start Media controller
-        Intent intent = new Intent(getActivity(), MusicControllerActivity.class);
+        // start MusicPlayer
+        Intent intent = new Intent(getActivity(), MusicPlayerActivity.class);
         intent.putExtra(WiFiDirectActivity.EXTRA_SONG_URI, uri.toString());
-        intent.putExtra(MusicControllerService.EXTRAS_GROUP_OWNER_ADDRESS,
+        intent.putExtra(SendCommandService.EXTRAS_GROUP_OWNER_ADDRESS,
                 info.groupOwnerAddress.getHostAddress());
-        intent.putExtra(MusicControllerService.EXTRAS_GROUP_OWNER_PORT, 8989);
+        intent.putExtra(SendCommandService.EXTRAS_GROUP_OWNER_PORT, 8989);
+        intent.putExtra(MusicPlayerActivity.EXTRAS_IS_CONTROLLER, true);
         getActivity().startActivity(intent);
     }
 
-    public static void startFileServerAsyncTask(){
-        mFileServerAsyncTask = new FileServerAsyncTask(mActivity, mContentViewStatic.findViewById(R.id.status_text))
-                .execute();
+    public void startFileServerAsyncTask(){
+        mFileServerAsyncTask = new FileServerAsyncTask(this).execute();
         Log.d(WiFiDirectActivity.TAG, "started FireServer");
     }
 
@@ -161,6 +157,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             progressDialog.dismiss();
         }
         this.info = info;
+        mHost = info.groupOwnerAddress.getHostAddress();
         this.getView().setVisibility(View.VISIBLE);
 
         // The owner IP is now known.
@@ -228,16 +225,14 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
      */
     public static class FileServerAsyncTask extends AsyncTask<Void, Void, String> {
 
+        private DeviceDetailFragment mParent;
         private Context context;
         private TextView statusText;
 
-        /**
-         * @param context
-         * @param statusText
-         */
-        public FileServerAsyncTask(Context context, View statusText) {
-            this.context = context;
-            this.statusText = (TextView) statusText;
+        public FileServerAsyncTask(DeviceDetailFragment parent) {
+            this.mParent = parent;
+            this.context = this.mParent.getActivity();
+            this.statusText = (TextView) this.mParent.getActivity().findViewById(android.R.id.content).findViewById(R.id.status_text);
         }
 
         @Override
@@ -285,8 +280,13 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 this.cancel(true);
                 Log.d(WiFiDirectActivity.TAG, "stopped FireServer");
                 statusText.setText("File copied - " + result);
+                // start MusicPlayer
                 Intent intent = new Intent(context, MusicPlayerActivity.class);
                 intent.putExtra(WiFiDirectActivity.EXTRA_SONG_URI, "file://" + result);
+                intent.putExtra(SendCommandService.EXTRAS_GROUP_OWNER_ADDRESS,
+                        mHost);
+                intent.putExtra(SendCommandService.EXTRAS_GROUP_OWNER_PORT, 8989);
+                intent.putExtra(MusicPlayerActivity.EXTRAS_IS_CONTROLLER, false);
                 context.startActivity(intent);
             }
         }
