@@ -175,6 +175,8 @@ public class MusicPlayerActivity extends Activity{
         Log.d(TAG, "offset: " + offset);
         if (musicBound) {
             SendCommandService.startActionSendCommand(getApplicationContext(), host, port, "PLAY");
+            musicSrv.playSong(mSong);
+            /*
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -182,6 +184,7 @@ public class MusicPlayerActivity extends Activity{
                     musicSrv.playSong(mSong);
                 }
             }, offset);
+            */
         }
     }
 
@@ -272,16 +275,16 @@ public class MusicPlayerActivity extends Activity{
                 statusText.setText("Command received- " + result);
                 switch(result){
                     case "PLAY":
-                        musicSrv.playSong(mParent.mSong);
                         mParent.startMusicPlayerAsyncTask();
+                        musicSrv.playSong(mParent.mSong);
                         break;
                     case "STOP":
-                        musicSrv.pauseSong();
                         mParent.startMusicPlayerAsyncTask();
+                        musicSrv.pauseSong();
                         break;
                     case "TIME":
-                        SendCommandService.startActionSendCommand(mParent.getApplicationContext(), mParent.host, mParent.port, "PING");
                         mParent.startMusicPlayerAsyncTask();
+                        SendCommandService.startActionSendCommand(mParent.getApplicationContext(), mParent.host, mParent.port, "PING");
                         break;
                     case "PING":
                         this.cancel(true);
@@ -298,8 +301,8 @@ public class MusicPlayerActivity extends Activity{
                         break;
                     default:
                         // ip address of client
-                        Log.d(TAG, "Got client IP "+result);
                         mParent.startMusicPlayerAsyncTask();
+                        Log.d(TAG, "Got client IP "+result);
                         mParent.host = result;
                         SendCommandService.startActionSendCommand(mParent.getApplicationContext(), mParent.host, mParent.port, "READY");
                         break;
