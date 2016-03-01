@@ -63,6 +63,7 @@ public class SendCommandService extends IntentService {
                 String command = intent.getExtras().getString(EXTRAS_COMMAND);
 
                 try {
+                    Log.d(TAG, "Writing to client: " + command);
                     Log.d(TAG, "Opening client socket - ");
                     socket.bind(null);
                     socket.connect((new InetSocketAddress(host, port)), SOCKET_TIMEOUT);
@@ -72,7 +73,6 @@ public class SendCommandService extends IntentService {
                     PrintStream printStream = new PrintStream(stream);
                     printStream.print(command);
                     printStream.close();
-                    Log.d(TAG, "Client: Data written");
                 } catch (IOException e) {
                     Log.e(TAG, e.getMessage());
                 } finally {

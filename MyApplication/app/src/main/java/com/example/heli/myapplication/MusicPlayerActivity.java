@@ -5,10 +5,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.Uri;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Activity;
+import android.os.Handler;
 import android.os.IBinder;
+import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -17,8 +21,16 @@ import android.widget.TextView;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Collections;
+import java.util.List;
 
 public class MusicPlayerActivity extends Activity{
     public static final String TAG = "musicplayer";
@@ -29,8 +41,9 @@ public class MusicPlayerActivity extends Activity{
     private MusicService musicSrv;
     private boolean musicBound = false;
     private boolean isController = false;
-    private static MusicPlayerActivity mActivity = null;
     private static AsyncTask<Void, Void, String> mMusicPlayerAsyncTask;
+    private long startTime;
+    private Handler mHandler = null;
 
     public static final String EXTRAS_IS_CONTROLLER = "is_controller";
 
@@ -52,12 +65,13 @@ public class MusicPlayerActivity extends Activity{
         Log.d(TAG, "received port:" + port);
         Log.d(TAG, "received is controller:" + isController);
 
-        mActivity = this;
+        mHandler = new Handler();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+
         // Bind to LocalService
         if(playIntent==null){
             Log.d(TAG, "starting music service");
@@ -85,8 +99,39 @@ public class MusicPlayerActivity extends Activity{
                 }
             });
             Log.d(TAG, "made buttons");
-
         }
+
+    }
+
+    private void sendLocalIpAddress(){
+        String address = getLocalAddress();
+        SendCommandService.startActionSendCommand(getApplicationContext(), host, port, address);
+    }
+
+    public String getLocalAddress() {
+        String localAddress = "";
+        try {
+            List<NetworkInterface> nInterfaces = Collections
+                    .list(NetworkInterface.getNetworkInterfaces());
+            if (nInterfaces != null){
+                Log.d(TAG, "Number of interfaces: " + String.valueOf(nInterfaces.size()));
+            }
+            for (NetworkInterface nInterface : nInterfaces) {
+                if (nInterface.getName().contains("p2p")) {
+
+                    List<InetAddress> iAddresses = Collections.list(nInterface.getInetAddresses());
+                    for (InetAddress iAddress : iAddresses) {
+                        if (!iAddress.getHostAddress().contains("p2p"))
+                            localAddress = iAddress.getHostAddress();
+                    }
+
+                }
+            }
+        } catch (Exception ex) {
+            Log.e(TAG, ex.getMessage());
+        }
+        Log.d(TAG, "local address: " + localAddress);
+        return localAddress;
     }
 
     private void startMusicPlayerAsyncTask(){
@@ -106,6 +151,7 @@ public class MusicPlayerActivity extends Activity{
 
             if (!isController)
                 startMusicPlayerAsyncTask();
+
         }
 
         @Override
@@ -114,12 +160,33 @@ public class MusicPlayerActivity extends Activity{
         }
     };
 
+    public void guessOffset(){
+        startMusicPlayerAsyncTask();
+        sendLocalIpAddress();
+    }
 
-    public void sendPlay(){
+    private void onServerReady(){
+        startTime = System.nanoTime();
+        SendCommandService.startActionSendCommand(getApplicationContext(), host, port, "TIME");
+    }
+
+    public void sendOffsetPlay(){
+        long offset = ((System.nanoTime() - startTime) / 2);
+        Log.d(TAG, "offset: " + offset);
         if (musicBound) {
             SendCommandService.startActionSendCommand(getApplicationContext(), host, port, "PLAY");
-            musicSrv.playSong(mSong);
+            mHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    Log.d(TAG, "playing offsetted song");
+                    musicSrv.playSong(mSong);
+                }
+            }, offset);
         }
+    }
+
+    private void sendPlay(){
+        guessOffset();
     }
 
     public void sendPause(){
@@ -138,6 +205,7 @@ public class MusicPlayerActivity extends Activity{
             stopService(playIntent);
             musicBound = false;
         }
+        mMusicPlayerAsyncTask.cancel(true);
     }
 
     public void kill() {
@@ -211,15 +279,32 @@ public class MusicPlayerActivity extends Activity{
                         musicSrv.pauseSong();
                         mParent.startMusicPlayerAsyncTask();
                         break;
+                    case "TIME":
+                        SendCommandService.startActionSendCommand(mParent.getApplicationContext(), mParent.host, mParent.port, "PING");
+                        mParent.startMusicPlayerAsyncTask();
+                        break;
+                    case "PING":
+                        this.cancel(true);
+                        mParent.sendOffsetPlay();
+                        break;
                     case "KILL":
                         this.cancel(true);
                         Log.d(TAG, "Stopped MusicPlayerAsyncTask");
                         mParent.kill();
                         break;
+                    case "READY":
+                        mParent.startMusicPlayerAsyncTask();
+                        mParent.onServerReady();
+                        break;
+                    default:
+                        // ip address of client
+                        Log.d(TAG, "Got client IP "+result);
+                        mParent.startMusicPlayerAsyncTask();
+                        mParent.host = result;
+                        SendCommandService.startActionSendCommand(mParent.getApplicationContext(), mParent.host, mParent.port, "READY");
+                        break;
                 }
-
             }
-
         }
 
         /*
