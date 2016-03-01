@@ -172,19 +172,18 @@ public class MusicPlayerActivity extends Activity{
 
     public void sendOffsetPlay(){
         long offset = ((System.nanoTime() - startTime) / 2);
+        long msOffset = offset / 1000000;
         Log.d(TAG, "offset: " + offset);
+        Log.d(TAG, "ms offset: " + msOffset);
         if (musicBound) {
             SendCommandService.startActionSendCommand(getApplicationContext(), host, port, "PLAY");
-            musicSrv.playSong(mSong);
-            /*
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     Log.d(TAG, "playing offsetted song");
                     musicSrv.playSong(mSong);
                 }
-            }, offset);
-            */
+            }, msOffset);
         }
     }
 
