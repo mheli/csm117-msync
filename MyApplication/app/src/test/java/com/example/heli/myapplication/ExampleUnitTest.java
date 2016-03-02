@@ -1,4 +1,4 @@
-package com.example.heli.myapplication;
+package com.example.heli.msync;
 
 import org.junit.Test;
 

@@ -1,6 +1,5 @@
-package com.example.heli.myapplication;
+package com.example.heli.msync;
 
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
 /*
@@ -30,7 +29,6 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.WifiP2pManager.ActionListener;
 import android.net.wifi.p2p.WifiP2pManager.Channel;
 import android.net.wifi.p2p.WifiP2pManager.ChannelListener;
-import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
@@ -39,7 +37,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
-import com.example.heli.myapplication.DeviceListFragment.DeviceActionListener;
+import com.example.heli.msync.DeviceListFragment.DeviceActionListener;
 
 /**
  * An activity that uses WiFi Direct APIs to discover and connect with available
@@ -59,7 +57,7 @@ public class WiFiDirectActivity extends Activity implements ChannelListener, Dev
     private Channel channel;
     private BroadcastReceiver receiver = null;
 
-    public final static String EXTRA_SONG_URI = "com.example.heli.myapplication.SONG_URI";
+    public final static String EXTRA_SONG_URI = "com.example.heli.msync.SONG_URI";
     /**
      * @param isWifiP2pEnabled the isWifiP2pEnabled to set
      */

@@ -1,18 +1,15 @@
-package com.example.heli.myapplication;
+package com.example.heli.msync;
 
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.Uri;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.app.Activity;
 import android.os.Handler;
 import android.os.IBinder;
-import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -21,14 +18,10 @@ import android.widget.TextView;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Collections;
 import java.util.List;
 
@@ -137,7 +130,7 @@ public class MusicPlayerActivity extends Activity{
     private void startMusicPlayerAsyncTask(){
         mMusicPlayerAsyncTask = new MusicPlayerAsyncTask(this).execute();
         Log.d(TAG, "started MusicPlayerAsyncTask");
-}
+    }
 
     //connect to the service
     private ServiceConnection musicConnection = new ServiceConnection() {
@@ -207,7 +200,10 @@ public class MusicPlayerActivity extends Activity{
             stopService(playIntent);
             musicBound = false;
         }
-        mMusicPlayerAsyncTask.cancel(true);
+        if (mMusicPlayerAsyncTask != null){
+            mMusicPlayerAsyncTask.cancel(true);
+            Log.d(TAG, "Stopped MusicPlayerAsyncTask");
+        }
     }
 
     public void kill() {
@@ -235,6 +231,7 @@ public class MusicPlayerActivity extends Activity{
             if(isCancelled())
                 return null;
             try {
+                Log.d(TAG, "MusicPlayerAsyncTask doinbackground");
                 ServerSocket serverSocket = new ServerSocket(8989);
                 Log.d(TAG, "Server: Socket opened");
                 Socket client = serverSocket.accept();
@@ -287,6 +284,7 @@ public class MusicPlayerActivity extends Activity{
                         break;
                     case "PING":
                         this.cancel(true);
+                        Log.d(TAG, "Stopped MusicPlayerAsyncTask");
                         mParent.sendOffsetPlay();
                         break;
                     case "KILL":

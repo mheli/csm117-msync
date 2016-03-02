@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.heli.myapplication;
+package com.example.heli.msync;
 
 import android.app.ListFragment;
 import android.app.ProgressDialog;

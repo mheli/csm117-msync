@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package com.example.heli.myapplication;
+package com.example.heli.msync;
 
-import android.app.Activity;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -36,12 +35,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.example.heli.myapplication.DeviceListFragment.DeviceActionListener;
+import com.example.heli.msync.DeviceListFragment.DeviceActionListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -148,7 +148,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
 
     public void startFileServerAsyncTask(){
         mFileServerAsyncTask = new FileServerAsyncTask(this).execute();
-        Log.d(WiFiDirectActivity.TAG, "started FireServer");
+        Log.d(WiFiDirectActivity.TAG, "started FileServer");
     }
 
     @Override
@@ -206,6 +206,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
      * Clears the UI fields after a disconnect or direct mode disable operation.
      */
     public void resetViews() {
+       stopFileServerAsyncTask();
         mContentView.findViewById(R.id.btn_connect).setVisibility(View.VISIBLE);
         TextView view = (TextView) mContentView.findViewById(R.id.device_address);
         view.setText(R.string.empty);
@@ -219,6 +220,13 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         this.getView().setVisibility(View.GONE);
     }
 
+    public void stopFileServerAsyncTask (){
+        if (mFileServerAsyncTask != null){
+            mFileServerAsyncTask.cancel(true);
+            Log.d(WiFiDirectActivity.TAG, "stopped FileServer on disconnect");
+        }
+    }
+
     /**
      * A simple server socket that accepts connection and writes some data on
      * the stream.
@@ -228,6 +236,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         private DeviceDetailFragment mParent;
         private Context context;
         private TextView statusText;
+        private ServerSocket serverSocket = null;
 
         public FileServerAsyncTask(DeviceDetailFragment parent) {
             this.mParent = parent;
@@ -240,10 +249,28 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
             if (isCancelled())
                 return null;
             try {
-                ServerSocket serverSocket = new ServerSocket(8988);
+                Log.d(WiFiDirectActivity.TAG, "FileServer doinbackground");
+                serverSocket = new ServerSocket(8988);
                 Log.d(WiFiDirectActivity.TAG, "Server: Socket opened");
-                Socket client = serverSocket.accept();
-                Log.d(WiFiDirectActivity.TAG, "Server: connection done");
+                Socket client = null;
+
+                boolean listening = true;
+                while(listening){
+                    try{
+                        if (isCancelled()) {
+                            return null;
+                        }
+                        // timeout after 500 ms
+                        serverSocket.setSoTimeout(1000);
+                        client = serverSocket.accept();
+                        Log.d(WiFiDirectActivity.TAG, "Server: connection done");
+                        listening = false;
+                    } catch (InterruptedIOException e){
+                        // do nothing, loop again
+                        Log.d(WiFiDirectActivity.TAG, "fileserver timed out");
+                    }
+                }
+
                 final File f = new File(Environment.getExternalStorageDirectory() + "/"
                         + context.getPackageName() + "/wifip2pshared-" + System.currentTimeMillis()
                         + ".mp3");
@@ -261,15 +288,27 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
                 return f.getAbsolutePath();
             } catch (IOException e) {
                 Log.e(WiFiDirectActivity.TAG, e.getMessage());
+                try {
+                    if (!serverSocket.isClosed())
+                        serverSocket.close();
+                } catch (IOException err) {
+                    Log.e(WiFiDirectActivity.TAG, err.getMessage());
+            }
                 return null;
             }
         }
 
         @Override
         protected void onCancelled(){
-
+            if (!serverSocket.isClosed()){
+                try {
+                    serverSocket.close();
+                } catch (Exception e) {
+                    Log.e(WiFiDirectActivity.TAG, e.getMessage());
+                }
+                Log.d(WiFiDirectActivity.TAG, "closed fileserver socket");
+            }
         }
-
         /*
          * (non-Javadoc)
          * @see android.os.AsyncTask#onPostExecute(java.lang.Object)
@@ -278,7 +317,7 @@ public class DeviceDetailFragment extends Fragment implements ConnectionInfoList
         protected void onPostExecute(String result) {
             if (result != null) {
                 this.cancel(true);
-                Log.d(WiFiDirectActivity.TAG, "stopped FireServer");
+                Log.d(WiFiDirectActivity.TAG, "stopped FileServer");
                 statusText.setText("File copied - " + result);
                 // start MusicPlayer
                 Intent intent = new Intent(context, MusicPlayerActivity.class);

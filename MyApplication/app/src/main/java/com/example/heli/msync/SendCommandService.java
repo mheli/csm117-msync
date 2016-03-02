@@ -1,4 +1,4 @@
-package com.example.heli.myapplication;
+package com.example.heli.msync;
 
 import android.app.IntentService;
 import android.content.Intent;
@@ -28,7 +28,7 @@ public class SendCommandService extends IntentService {
 
     // TODO: Rename actions, choose action names that describe tasks that this
     // IntentService can perform, e.g. ACTION_FETCH_NEW_ITEMS
-    private static final String ACTION_SEND_COMMAND = "com.example.heli.myapplication.action.SEND.COMMAND";
+    private static final String ACTION_SEND_COMMAND = "com.example.heli.msync.action.SEND.COMMAND";
 
     // TODO: Rename parameters
 

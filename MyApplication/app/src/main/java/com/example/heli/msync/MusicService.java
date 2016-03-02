@@ -1,16 +1,12 @@
-package com.example.heli.myapplication;
+package com.example.heli.msync;
 
-import android.app.IntentService;
 import android.app.Service;
-import android.content.ContentUris;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
-import android.os.PowerManager;
-import android.provider.MediaStore;
 import android.util.Log;
 
 public class MusicService extends Service {
