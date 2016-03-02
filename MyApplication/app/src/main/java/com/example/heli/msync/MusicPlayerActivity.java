@@ -37,6 +37,7 @@ public class MusicPlayerActivity extends Activity{
     private static AsyncTask<Void, Void, String> mMusicPlayerAsyncTask;
     private long startTime;
     private Handler mHandler = null;
+    private boolean isControlEnabled = false;
 
     public static final String EXTRAS_IS_CONTROLLER = "is_controller";
 
@@ -76,27 +77,30 @@ public class MusicPlayerActivity extends Activity{
 
         if (isController){
             Log.d(TAG, "making buttons");
-            final Button buttonPlay = (Button) findViewById(R.id.buttonPlay);
-            buttonPlay.setOnClickListener(new View.OnClickListener() {
+            TextView textStatus = (TextView) findViewById(android.R.id.content).findViewById(R.id.status_text);
+            textStatus.setVisibility(View.INVISIBLE);
+            final Button buttonSync = (Button) findViewById(R.id.buttonSync);
+            buttonSync.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    sendPlay();
+                    sendLocalIpAddress();
                 }
             });
-
-            final Button buttonStop = (Button) findViewById(R.id.buttonStop);
-            buttonStop.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    sendPause();
-                }
-            });
-            Log.d(TAG, "made buttons");
+        }
+        else {
+            final Button buttonSync = (Button) findViewById(R.id.buttonSync);
+            buttonSync.setVisibility(View.INVISIBLE);
         }
 
+        final Button buttonPlay = (Button) findViewById(R.id.buttonPlay);
+        buttonPlay.setVisibility(View.INVISIBLE);
+
+        final Button buttonStop = (Button) findViewById(R.id.buttonStop);
+        buttonStop.setVisibility(View.INVISIBLE);
     }
 
     private void sendLocalIpAddress(){
+        startMusicPlayerAsyncTask();
         String address = getLocalAddress();
         SendCommandService.startActionSendCommand(getApplicationContext(), host, port, address);
     }
@@ -144,7 +148,6 @@ public class MusicPlayerActivity extends Activity{
 
             if (!isController)
                 startMusicPlayerAsyncTask();
-
         }
 
         @Override
@@ -153,14 +156,8 @@ public class MusicPlayerActivity extends Activity{
         }
     };
 
-    public void guessOffset(){
-        startMusicPlayerAsyncTask();
-        sendLocalIpAddress();
-    }
-
     private void onServerReady(){
-        startTime = System.nanoTime();
-        SendCommandService.startActionSendCommand(getApplicationContext(), host, port, "TIME");
+        enableControls();
     }
 
     public void sendOffsetPlay(){
@@ -181,7 +178,8 @@ public class MusicPlayerActivity extends Activity{
     }
 
     private void sendPlay(){
-        guessOffset();
+        startTime = System.nanoTime();
+        SendCommandService.startActionSendCommand(getApplicationContext(), host, port, "TIME");
     }
 
     public void sendPause(){
@@ -208,6 +206,38 @@ public class MusicPlayerActivity extends Activity{
 
     public void kill() {
         finish();
+    }
+
+    public void enableControls(){
+        if (!isControlEnabled){
+            final Button buttonSync = (Button) findViewById(R.id.buttonSync);
+            buttonSync.setVisibility(View.INVISIBLE);
+
+            Log.d(TAG, "making buttons");
+            final Button buttonPlay = (Button) findViewById(R.id.buttonPlay);
+            buttonPlay.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    sendPlay();
+                }
+            });
+
+            final Button buttonStop = (Button) findViewById(R.id.buttonStop);
+            buttonStop.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    sendPause();
+                }
+            });
+            Log.d(TAG, "made buttons");
+
+            TextView textStatus = (TextView) findViewById(android.R.id.content).findViewById(R.id.status_text);
+
+            textStatus.setVisibility(View.INVISIBLE);
+            buttonPlay.setVisibility(View.VISIBLE);
+            buttonStop.setVisibility(View.VISIBLE);
+            isControlEnabled = true;
+        }
     }
 
     /**
@@ -268,7 +298,6 @@ public class MusicPlayerActivity extends Activity{
         @Override
         protected void onPostExecute(String result) {
             if (result != null) {
-                statusText.setText("Command received- " + result);
                 switch(result){
                     case "PLAY":
                         mParent.startMusicPlayerAsyncTask();
@@ -283,8 +312,7 @@ public class MusicPlayerActivity extends Activity{
                         SendCommandService.startActionSendCommand(mParent.getApplicationContext(), mParent.host, mParent.port, "PING");
                         break;
                     case "PING":
-                        this.cancel(true);
-                        Log.d(TAG, "Stopped MusicPlayerAsyncTask");
+                        mParent.startMusicPlayerAsyncTask();
                         mParent.sendOffsetPlay();
                         break;
                     case "KILL":
@@ -301,6 +329,7 @@ public class MusicPlayerActivity extends Activity{
                         mParent.startMusicPlayerAsyncTask();
                         Log.d(TAG, "Got client IP "+result);
                         mParent.host = result;
+                        mParent.enableControls();
                         SendCommandService.startActionSendCommand(mParent.getApplicationContext(), mParent.host, mParent.port, "READY");
                         break;
                 }
@@ -313,7 +342,7 @@ public class MusicPlayerActivity extends Activity{
          */
         @Override
         protected void onPreExecute() {
-            statusText.setText("Receiving command");
+            statusText.setText("Waiting for sync...");
         }
 
     }
