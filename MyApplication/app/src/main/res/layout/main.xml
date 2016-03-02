@@ -3,25 +3,31 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent">
-    <LinearLayout
+    android:layout_height="fill_parent"
+    android:background="#1168df">
+
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:id="@+id/linearLayout1"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
-        <fragment
-            class="com.example.heli.msync.DeviceListFragment"
-            android:id="@+id/frag_list"
+        android:layout_height="0dp"
+        android:layout_weight="0.5"
+        >
+        <ImageView
+            android:id="@+id/imageView1"
             android:layout_width="match_parent"
-            android:layout_height="@dimen/phone_list_height">
-            <!-- Preview: layout=@layout/row_devices -->
-        </fragment>
-        <fragment
-            class="com.example.heli.msync.DeviceDetailFragment"
-            android:id="@+id/frag_detail"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-            <!-- Preview: layout=@layout/device_detail -->
-        </fragment>
-    </LinearLayout>
+            android:layout_height="match_parent"
+            android:src="@drawable/m_sync_home"
+            android:layout_gravity="top"/>
+
+    </RelativeLayout>
+
+
+    <ImageButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/imageButton"
+        android:layout_gravity="center"
+        android:src="@drawable/find_peers_button"
+        style="?android:attr/borderlessButtonStyle"/>
+
+
 </LinearLayout>

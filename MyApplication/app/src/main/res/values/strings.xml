@@ -16,4 +16,5 @@
     <string name="label_peers">PEERS</string>
     <string name="title_activity_music_player">MusicPlayerActivity</string>
     <string name="title_activity_music_controller">MusicControllerActivity</string>
+    <string name="find_peer">Find Peer!</string>
 </resources>
