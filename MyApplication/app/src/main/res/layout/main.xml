@@ -9,19 +9,35 @@
         android:id="@+id/linearLayout1"
         android:layout_height="match_parent"
         android:orientation="vertical">
-        <fragment
-            class="com.example.heli.msync.DeviceListFragment"
-            android:id="@+id/frag_list"
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="@dimen/phone_list_height">
-            <!-- Preview: layout=@layout/row_devices -->
-        </fragment>
-        <fragment
-            class="com.example.heli.msync.DeviceDetailFragment"
-            android:id="@+id/frag_detail"
+            android:layout_height="0dp"
+            android:layout_weight="0.5">
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/m_sync_home"
+                android:background="#0E67DF"
+                android:adjustViewBounds="true"/>
+        </RelativeLayout>
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
-            <!-- Preview: layout=@layout/device_detail -->
-        </fragment>
+            android:layout_height="0dp"
+            android:layout_weight="0.5">
+            <fragment
+                class="com.example.heli.msync.DeviceListFragment"
+                android:id="@+id/frag_list"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/phone_list_height">
+                <!-- Preview: layout=@layout/row_devices -->
+            </fragment>
+            <fragment
+                class="com.example.heli.msync.DeviceDetailFragment"
+                android:id="@+id/frag_detail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+                <!-- Preview: layout=@layout/device_detail -->
+            </fragment>
+        </RelativeLayout>
     </LinearLayout>
 </LinearLayout>
