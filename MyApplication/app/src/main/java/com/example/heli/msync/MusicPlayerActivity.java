@@ -13,6 +13,7 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import java.io.ByteArrayOutputStream;
@@ -38,6 +39,7 @@ public class MusicPlayerActivity extends Activity{
     private long startTime;
     private Handler mHandler = null;
     private boolean isControlEnabled = false;
+    public boolean play_pressed = false;
 
     public static final String EXTRAS_IS_CONTROLLER = "is_controller";
 
@@ -92,10 +94,10 @@ public class MusicPlayerActivity extends Activity{
             buttonSync.setVisibility(View.INVISIBLE);
         }
 
-        final Button buttonPlay = (Button) findViewById(R.id.buttonPlay);
+        final ImageButton buttonPlay = (ImageButton) findViewById(R.id.buttonPlay);
         buttonPlay.setVisibility(View.INVISIBLE);
 
-        final Button buttonStop = (Button) findViewById(R.id.buttonStop);
+        final ImageButton buttonStop = (ImageButton) findViewById(R.id.buttonStop);
         buttonStop.setVisibility(View.INVISIBLE);
     }
 
@@ -214,19 +216,24 @@ public class MusicPlayerActivity extends Activity{
             buttonSync.setVisibility(View.INVISIBLE);
 
             Log.d(TAG, "making buttons");
-            final Button buttonPlay = (Button) findViewById(R.id.buttonPlay);
+            final ImageButton buttonPlay = (ImageButton) findViewById(R.id.buttonPlay);
             buttonPlay.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     sendPlay();
+                    play_pressed = true;
+                    buttonVisibility();
+
                 }
             });
 
-            final Button buttonStop = (Button) findViewById(R.id.buttonStop);
+            final ImageButton buttonStop = (ImageButton) findViewById(R.id.buttonStop);
             buttonStop.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     sendPause();
+                    play_pressed = false;
+                    buttonVisibility();
                 }
             });
             Log.d(TAG, "made buttons");
@@ -234,9 +241,24 @@ public class MusicPlayerActivity extends Activity{
             TextView textStatus = (TextView) findViewById(android.R.id.content).findViewById(R.id.status_text);
 
             textStatus.setVisibility(View.INVISIBLE);
+
             buttonPlay.setVisibility(View.VISIBLE);
-            buttonStop.setVisibility(View.VISIBLE);
+            buttonStop.setVisibility(View.INVISIBLE);
+
             isControlEnabled = true;
+        }
+    }
+
+    public void buttonVisibility(){
+        final ImageButton buttonPlay = (ImageButton) findViewById(R.id.buttonPlay);
+        final ImageButton buttonStop = (ImageButton) findViewById(R.id.buttonStop);
+        if(play_pressed){
+            buttonPlay.setVisibility(View.INVISIBLE);
+            buttonStop.setVisibility(View.VISIBLE);
+        }
+        else{
+            buttonPlay.setVisibility(View.VISIBLE);
+            buttonStop.setVisibility(View.INVISIBLE);
         }
     }
 
@@ -244,7 +266,7 @@ public class MusicPlayerActivity extends Activity{
      * A simple server socket that accepts connection and writes some data on
      * the stream.
      */
-    public static class MusicPlayerAsyncTask extends AsyncTask<Void, Void, String> {
+    public class MusicPlayerAsyncTask extends AsyncTask<Void, Void, String> {
 
         private MusicPlayerActivity mParent;
         private TextView statusText;
@@ -302,10 +324,14 @@ public class MusicPlayerActivity extends Activity{
                     case "PLAY":
                         mParent.startMusicPlayerAsyncTask();
                         musicSrv.playSong(mParent.mSong);
+                        play_pressed = true;
+                        buttonVisibility();
                         break;
                     case "STOP":
                         mParent.startMusicPlayerAsyncTask();
                         musicSrv.pauseSong();
+                        play_pressed = false;
+                        buttonVisibility();
                         break;
                     case "TIME":
                         mParent.startMusicPlayerAsyncTask();
